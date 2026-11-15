@@ -44,6 +44,7 @@
 #include "te_str.h"
 #include "te_string.h"
 #include "logger_api.h"
+#include "agentlib.h"
 
 #include "ta_shell.h"
 #include "ta_shell_term.h"
@@ -405,7 +406,7 @@ ta_shell_open(const char *argv_nl, int cols, int rows, const char *term,
     {
         close(master);
         kill(pid, SIGKILL);
-        (void)waitpid(pid, NULL, 0);
+        (void)ta_waitpid(pid, NULL, 0);
         return TE_RC(TE_TA_UNIX, TE_ENOMEM);
     }
     s = &sessions[slot];
@@ -808,7 +809,7 @@ ta_shell_wait(int handle, int timeout_ms, int *exited, int *exit_code,
         if (!s->reaped)
         {
             int   status;
-            pid_t r = waitpid(s->child, &status, WNOHANG);
+            pid_t r = ta_waitpid(s->child, &status, WNOHANG);
 
             if (r == s->child)
                 store_status(s, status);
@@ -852,7 +853,7 @@ ta_shell_close(int handle)
         kill(s->child, SIGHUP);
         for (i = 0; i < 20; i++)      /* ~200 ms grace */
         {
-            if (waitpid(s->child, &status, WNOHANG) == s->child)
+            if (ta_waitpid(s->child, &status, WNOHANG) == s->child)
             {
                 s->reaped = true;
                 break;
@@ -866,7 +867,7 @@ ta_shell_close(int handle)
         if (!s->reaped)
         {
             kill(s->child, SIGKILL);
-            (void)waitpid(s->child, &status, 0);
+            (void)ta_waitpid(s->child, &status, 0);
         }
     }
 

@@ -25,6 +25,7 @@ sources += files(
 te_libs += [
     'logger_core',
     'tools',
+    'agentlib',
 ]
 
 cc = meson.get_compiler('c')
