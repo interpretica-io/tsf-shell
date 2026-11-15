@@ -68,6 +68,8 @@ tapi_shell_close(&sh);
 | `tapi_shell_row_text` / `_row_attrs` | A row as text, or every cell of a row as records |
 | `tapi_shell_resize` | Change the screen size (raises SIGWINCH on the child) |
 | `tapi_shell_scrollback` | Lines that have scrolled off the top |
+| `tapi_shell_feed` / `_feed_str` | Put bytes straight into the emulator, bypassing the pty — the emulator itself as the device under test |
+| `tapi_shell_snapshot_restore` | Replace the terminal by the one decoded from its own snapshot (libghostty-vt only) |
 | `tapi_shell_wait` / `tapi_shell_close` | Wait for the child to exit; end the session |
 
 Two things this makes possible beyond scripting a CLI: **testing a
@@ -109,14 +111,14 @@ Two emulator backends, compiled in only when the agent has the library;
 `tapi_shell_supports()` names which, so a test skips cleanly rather than
 failing when a backend is absent.
 
-- **libghostty-vt** (preferred) — the zero-dependency terminal-state C
-  library extracted from Ghostty. It needs no runtime dependency on the
-  agent (it can be vendored and statically linked), and its VT fidelity
-  is reference-grade. Building it needs a **Zig** toolchain on the build
-  host. Its embeddable C API is still settling, so every libghostty-vt
-  symbol this repository uses is confined to one clearly-marked binding
-  surface at the top of `ta_shell_ghostty.c`, to be reconciled with the
-  installed `<ghostty/vt.h>` at first build.
+- **libghostty-vt** (preferred) — the terminal-state C library of
+  Ghostty, used through its public C API (`<ghostty/vt.h>`). It is built
+  from the Ghostty sources with **Zig** (`zig build -Demit-lib-vt`),
+  which installs a static library and pkg-config files; linked
+  statically, it lives inside the agent and the agent host needs nothing
+  installed. It is the only backend with a snapshot format
+  (`tapi_shell_snapshot_restore`) and the only one that reports a
+  pending wrap at the cursor.
 - **libvterm** (fallback) — the emulator Neovim embeds. It is an
   ordinary C library with a stable API and ships on most distributions
   (Debian: `libvterm-dev`), so it is the pragmatic backend where Zig is
@@ -187,12 +189,6 @@ agent-local terminal output and is the first thing to build it. The
 first real build should expect the ordinary first-build fixes, and in
 particular:
 
-- **libghostty-vt**: its C API is provisional here. Reconcile the
-  binding surface at the top of `ta_shell_ghostty.c` with the installed
-  header (names and signatures only; the ops code underneath does not
-  change) and set `-DTA_SHELL_GHOSTTY_HEADER` once `<ghostty/vt.h>` is on
-  the include path. Settle how the Builder obtains the library (a
-  vendored Zig build, statically linked).
 - **libvterm**: the colour-classification macros
   (`VTERM_COLOR_IS_DEFAULT_FG`/`_INDEXED`) and
   `vterm_screen_convert_color_to_rgb` are present on modern libvterm

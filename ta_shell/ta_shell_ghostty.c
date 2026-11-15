@@ -46,6 +46,30 @@
 #define G_CELL_W_PX 8
 #define G_CELL_H_PX 16
 
+/*
+ * Largest unfinished escape sequence or UTF-8 character kept for a
+ * snapshot. A snapshot taken while a sequence is cut in the middle
+ * carries its bytes, so the restored terminal finishes it the way the
+ * live one would; without tracking, such a snapshot cannot be taken.
+ */
+#define G_CONTINUATION_MAX (64 * 1024)
+
+/*
+ * Lines the scrollback reports: the same number as the libvterm backend,
+ * so both give the same history.
+ *
+ * The library is not asked to keep that many lines. It drops history a
+ * whole page at a time, and a page holds from a few hundred rows on a
+ * wide screen to many thousands on a narrow one, so with a line limit
+ * the history falls far below the limit each time a page goes (to a
+ * handful of lines on a screen a few columns wide). Instead the history
+ * is bounded in bytes, generously enough that it always holds more than
+ * G_SCROLLBACK_LINES lines, and g_scrollback() reports the newest of
+ * them.
+ */
+#define G_SCROLLBACK_LINES 2000
+#define G_SCROLLBACK_BYTES ((size_t)64 << 20)
+
 /* ---- the state this backend keeps --------------------------------- */
 
 struct ta_shell_term {
@@ -191,15 +215,35 @@ g_version(void)
     return v != NULL ? v : "";
 }
 
+/* Apply the options every terminal of this backend has. */
+static bool
+g_configure(GhosttyTerminal vt)
+{
+    size_t continuation = G_CONTINUATION_MAX;
+    size_t bytes = G_SCROLLBACK_BYTES;
+
+    return ghostty_terminal_set(vt, GHOSTTY_TERMINAL_OPT_CONTINUATION_MAX_BYTES,
+                                &continuation) == GHOSTTY_SUCCESS &&
+           ghostty_terminal_set(vt, GHOSTTY_TERMINAL_OPT_SCROLLBACK_MAX_BYTES,
+                                &bytes) == GHOSTTY_SUCCESS;
+}
+
 static ta_shell_term *
 g_create(int cols, int rows)
 {
     struct ta_shell_term *t = TE_ALLOC(sizeof(*t));
 
-    if (ghostty_terminal_new(NULL, &t->vt, (uint16_t)cols,
+    if (cols <= 0 || rows <= 0 || cols > UINT16_MAX || rows > UINT16_MAX ||
+        ghostty_terminal_new(NULL, &t->vt, (uint16_t)cols,
                              (uint16_t)rows) != GHOSTTY_SUCCESS ||
         t->vt == NULL)
     {
+        free(t);
+        return NULL;
+    }
+    if (!g_configure(t->vt))
+    {
+        ghostty_terminal_free(t->vt);
         free(t);
         return NULL;
     }
@@ -329,6 +373,8 @@ g_text(ta_shell_term *t, te_string *out)
 static void
 g_resize(ta_shell_term *t, int cols, int rows)
 {
+    if (cols <= 0 || rows <= 0 || cols > UINT16_MAX || rows > UINT16_MAX)
+        return;
     (void)ghostty_terminal_resize(t->vt, (uint16_t)cols, (uint16_t)rows,
                                   G_CELL_W_PX, G_CELL_H_PX);
 }
@@ -346,7 +392,9 @@ g_scrollback(ta_shell_term *t, int max_lines, te_string *out)
     if (ghostty_terminal_get(t->vt, GHOSTTY_TERMINAL_DATA_SCROLLBACK_ROWS,
                              &total) != GHOSTTY_SUCCESS)
         return;
-    if (max_lines > 0 && (size_t)max_lines < total)
+    if (max_lines <= 0 || max_lines > G_SCROLLBACK_LINES)
+        max_lines = G_SCROLLBACK_LINES;
+    if ((size_t)max_lines < total)
         start = total - (size_t)max_lines;
 
     for (i = start; i < total; i++)
@@ -368,16 +416,29 @@ g_snapshot_restore(ta_shell_term *t)
     GhosttyTerminal        restored = NULL;
     uint8_t               *buf = NULL;
     size_t                 len = 0;
+    size_t                 continuation = G_CONTINUATION_MAX;
+    bool                   retain = true;
     int                    rc = 1;
 
     if (ghostty_snapshot_encode_alloc(t->vt, NULL, &buf,
                                       &len) != GHOSTTY_SUCCESS)
         return 1;
 
+    /*
+     * The restored terminal keeps tracking unfinished input, with the
+     * same limit, so it can itself be snapshotted again; the scrollback
+     * limits are not part of a snapshot and are applied again.
+     */
     if (ghostty_snapshot_decoder_new_buf(NULL, &dec, buf,
                                          len) == GHOSTTY_SUCCESS &&
+        ghostty_snapshot_decoder_set(dec,
+                GHOSTTY_SNAPSHOT_DECODER_OPT_MAX_CONTINUATION_BYTES,
+                &continuation) == GHOSTTY_SUCCESS &&
+        ghostty_snapshot_decoder_set(dec,
+                GHOSTTY_SNAPSHOT_DECODER_OPT_RETAIN_CONTINUATION,
+                &retain) == GHOSTTY_SUCCESS &&
         ghostty_snapshot_decoder_decode(dec, &restored) == GHOSTTY_SUCCESS &&
-        restored != NULL)
+        restored != NULL && g_configure(restored))
     {
         ghostty_snapshot_decoder_free(dec);
         dec = NULL;
@@ -386,6 +447,8 @@ g_snapshot_restore(ta_shell_term *t)
         rc = 0;
     }
 
+    if (restored != NULL && rc != 0)
+        ghostty_terminal_free(restored);
     if (dec != NULL)
         ghostty_snapshot_decoder_free(dec);
     ghostty_free(NULL, buf, len);

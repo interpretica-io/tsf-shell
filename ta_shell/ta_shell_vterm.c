@@ -100,6 +100,19 @@ conv_color(VTermScreen *vs, VTermColor col, int *packed, int *index)
               (int)col.rgb.blue;
 }
 
+/*
+ * libvterm puts this code point in the cell to the right of a wide
+ * glyph; the cell is part of the glyph, not a character of its own.
+ */
+#define VT_WIDE_TAIL ((uint32_t)-1)
+
+/* Is @p c the right half of a wide glyph? */
+static bool
+vt_is_tail(const VTermScreenCell *c)
+{
+    return c->width == 0 || c->chars[0] == VT_WIDE_TAIL;
+}
+
 /* Render one libvterm row of cells to text, trailing blanks trimmed. */
 static void
 row_cells_to_text(const VTermScreenCell *cells, int cols, te_string *out)
@@ -108,12 +121,13 @@ row_cells_to_text(const VTermScreenCell *cells, int cols, te_string *out)
     int i;
 
     for (i = 0; i < cols; i++)
-        if (cells[i].chars[0] != 0 && cells[i].chars[0] != (uint32_t)' ')
+        if (!vt_is_tail(&cells[i]) &&
+            cells[i].chars[0] != 0 && cells[i].chars[0] != (uint32_t)' ')
             last = i;
 
     for (i = 0; i <= last; i++)
     {
-        if (cells[i].width == 0)
+        if (vt_is_tail(&cells[i]))
             continue;   /* right half of a wide glyph */
         append_utf8(out, cells[i].chars[0]);
     }
@@ -121,37 +135,41 @@ row_cells_to_text(const VTermScreenCell *cells, int cols, te_string *out)
 
 /* ---- scrollback ring ---------------------------------------------- */
 
+/*
+ * Append a scrolled-off line, keeping the newest TA_SHELL_VTERM_SB_MAX.
+ *
+ * The ring grows by doubling up to exactly TA_SHELL_VTERM_SB_MAX slots.
+ * Once full - every slot in use - the oldest line is replaced, so the
+ * ring arithmetic is always modulo the number of lines it holds.
+ */
 static void
 sb_push(struct ta_shell_term *t, char *line)
 {
-    if (t->sb_cap == 0)
+    if (t->sb_len == t->sb_cap && t->sb_cap < TA_SHELL_VTERM_SB_MAX)
     {
-        t->sb_cap = 256;
-        t->sb = TE_ALLOC(sizeof(char *) * t->sb_cap);
-    }
-    if (t->sb_len < TA_SHELL_VTERM_SB_MAX && t->sb_len < t->sb_cap)
-    {
-        t->sb[(t->sb_head + t->sb_len) % t->sb_cap] = line;
-        t->sb_len++;
-        return;
-    }
-    if (t->sb_len >= t->sb_cap && t->sb_cap < TA_SHELL_VTERM_SB_MAX)
-    {
-        int oldcap = t->sb_cap;
-        char **grown = TE_ALLOC(sizeof(char *) * oldcap * 2);
-        int i;
+        int    newcap = t->sb_cap == 0 ? 256 : t->sb_cap * 2;
+        char **grown;
+        int    i;
 
+        if (newcap > TA_SHELL_VTERM_SB_MAX)
+            newcap = TA_SHELL_VTERM_SB_MAX;
+        grown = TE_ALLOC(sizeof(char *) * newcap);
         for (i = 0; i < t->sb_len; i++)
-            grown[i] = t->sb[(t->sb_head + i) % oldcap];
+            grown[i] = t->sb[(t->sb_head + i) % t->sb_cap];
         free(t->sb);
         t->sb = grown;
-        t->sb_cap *= 2;
+        t->sb_cap = newcap;
         t->sb_head = 0;
+    }
+
+    if (t->sb_len < t->sb_cap)
+    {
         t->sb[(t->sb_head + t->sb_len) % t->sb_cap] = line;
         t->sb_len++;
         return;
     }
-    /* Full: drop the oldest. */
+
+    /* Full: the oldest line makes room for the newest. */
     free(t->sb[t->sb_head]);
     t->sb[t->sb_head] = line;
     t->sb_head = (t->sb_head + 1) % t->sb_cap;
@@ -256,7 +274,8 @@ vt_cell(ta_shell_term *t, int x, int y, ta_shell_cell_t *out)
         return 1;
 
     memset(out, 0, sizeof(*out));
-    out->codepoint = c.chars[0];
+    /* The right half of a wide glyph holds no character of its own. */
+    out->codepoint = vt_is_tail(&c) ? 0 : c.chars[0];
     conv_color(t->vs, c.fg, &out->fg, &out->fg_index);
     conv_color(t->vs, c.bg, &out->bg, &out->bg_index);
     if (c.attrs.bold)      out->flags |= TA_SHELL_ATTR_BOLD;
@@ -300,6 +319,7 @@ vt_row_text(ta_shell_term *t, int y, te_string *out)
             VTermScreenCell c;
 
             if (vterm_screen_get_cell(t->vs, pos, &c) != 0 &&
+                !vt_is_tail(&c) &&
                 c.chars[0] != 0 && c.chars[0] != (uint32_t)' ')
                 last = x;
         }
@@ -310,7 +330,7 @@ vt_row_text(ta_shell_term *t, int y, te_string *out)
 
             if (vterm_screen_get_cell(t->vs, pos, &c) == 0)
                 continue;
-            if (c.width == 0)
+            if (vt_is_tail(&c))
                 continue;
             append_utf8(out, c.chars[0]);
         }
