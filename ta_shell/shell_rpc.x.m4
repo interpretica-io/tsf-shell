@@ -30,36 +30,28 @@
  * is carried faithfully.
  */
 
-/* Backend bits for shell_available.out.features / tapi_shell_supports(). */
-enum {
-    TARPC_SHELL_BACKEND_GHOSTTY = 1, /* libghostty-vt (preferred). */
-    TARPC_SHELL_BACKEND_VTERM   = 2  /* libvterm (fallback). */
-};
-
-/* shell_attach kind: how to open the existing byte-stream path. */
-enum {
-    TARPC_SHELL_ATTACH_PTY    = 1, /* a pty/char device: open() O_RDWR O_NOCTTY */
-    TARPC_SHELL_ATTACH_SERIAL = 2, /* a serial char device, same open path */
-    TARPC_SHELL_ATTACH_SOCKET = 3  /* a unix-domain stream socket: connect() */
-};
-
-/* shell_expect flags. */
-enum {
-    TARPC_SHELL_EXPECT_REGEX  = 1, /* pattern is a POSIX extended regex */
-    TARPC_SHELL_EXPECT_SCREEN = 2  /* match the rendered screen, not the stream */
-};
-
-/* Cell attribute bits for shell_cell.out.flags and the shell_row_attrs
- * records. The cursor-visible bit is reported by shell_screen only. */
-enum {
-    TARPC_SHELL_ATTR_BOLD      = 1,
-    TARPC_SHELL_ATTR_UNDERLINE = 2,
-    TARPC_SHELL_ATTR_REVERSE   = 4,
-    TARPC_SHELL_ATTR_ITALIC    = 8,
-    TARPC_SHELL_ATTR_BLINK     = 16,
-    TARPC_SHELL_ATTR_STRIKE    = 32,
-    TARPC_SHELL_ATTR_WIDE      = 64  /* left cell of a double-width glyph */
-};
+/*
+ * Wire constants (documentary; te_rpcgen takes no anonymous enums, so
+ * these live as named C constants in the hand-written headers that use
+ * them - ta_shell.h / ta_shell_term.h on the agent, tapi_shell.h on the
+ * engine - and are kept in step with the values here):
+ *
+ *   shell_available.out.features / backend to force:
+ *     1 = libghostty-vt (preferred), 2 = libvterm (fallback)
+ *
+ *   shell_attach.in.kind:
+ *     1 = pty/char device (open() O_RDWR O_NOCTTY), 2 = serial char
+ *     device (same open path), 3 = unix-domain stream socket (connect())
+ *
+ *   shell_expect.in.flags (bitmask):
+ *     1 = pattern is a POSIX extended regex,
+ *     2 = match the rendered screen rather than the output stream
+ *
+ *   shell_cell.out.flags / the shell_row_attrs records (bitmask):
+ *     1 bold, 2 underline, 4 reverse, 8 italic, 16 blink, 32 strike,
+ *     64 = left cell of a double-width glyph.
+ *   shell_screen.out.cursor_flags: bit 0 = cursor visible.
+ */
 
 /*
  * shell_available(): is a terminal-emulator backend compiled into this
