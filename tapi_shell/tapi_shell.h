@@ -168,6 +168,9 @@ typedef struct tapi_shell_screen_t {
     int   cursor_x;       /**< Cursor column. */
     int   cursor_y;       /**< Cursor row. */
     bool  cursor_visible; /**< Whether the cursor is shown. */
+    int   pending_wrap;   /**< 1 when the next character wraps to the next
+                               row, 0 when not, -1 when the backend does
+                               not report it. */
     char *text;           /**< Rows joined by '\n' (heap; free with result). */
 } tapi_shell_screen_t;
 
@@ -305,6 +308,34 @@ extern te_errno tapi_shell_cell(tapi_shell_session *session, int x, int y,
 /** Read the cursor position and visibility. */
 extern te_errno tapi_shell_cursor(tapi_shell_session *session, int *x, int *y,
                                   bool *visible);
+
+/**
+ * Feed @p len bytes straight into the session's emulator, as if the
+ * program had written them.
+ *
+ * The pty is not involved, so the bytes arrive exactly as given and at
+ * once. This is how a test drives the emulator itself as the device
+ * under test: open a session on an idle program and feed it the escape
+ * sequences to render.
+ */
+extern te_errno tapi_shell_feed(tapi_shell_session *session, const void *data,
+                                size_t len);
+
+/** Like @ref tapi_shell_feed for a NUL-terminated string. */
+extern te_errno tapi_shell_feed_str(tapi_shell_session *session,
+                                    const char *str);
+
+/**
+ * Take a snapshot of the session's terminal, decode it into a new
+ * terminal and continue the session on the decoded one.
+ *
+ * A snapshot has to carry everything that decides how later output is
+ * rendered, so a session must behave the same with and without this
+ * call. Only libghostty-vt has a snapshot format.
+ *
+ * @return Status code; TE_EOPNOTSUPP when the backend has no snapshots.
+ */
+extern te_errno tapi_shell_snapshot_restore(tapi_shell_session *session);
 
 /** Append row @p y as newline cell-records (see shell_rpc.x.m4) to @p out. */
 extern te_errno tapi_shell_row_attrs(tapi_shell_session *session, int y,

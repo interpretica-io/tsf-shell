@@ -50,7 +50,8 @@
  *   shell_cell.out.flags / the shell_row_attrs records (bitmask):
  *     1 bold, 2 underline, 4 reverse, 8 italic, 16 blink, 32 strike,
  *     64 = left cell of a double-width glyph.
- *   shell_screen.out.cursor_flags: bit 0 = cursor visible.
+ *   shell_screen.out.cursor_flags: bit 0 = cursor visible, bit 1 = the
+ *     next character wraps (pending wrap), bit 2 = bit 1 is reported.
  */
 
 /*
@@ -176,7 +177,8 @@ struct tarpc_shell_expect_out {
  *
  *   text          the visible rows, joined by '\n', trailing blanks
  *                 on each row trimmed
- *   cursor_flags  bit 0 = cursor visible
+ *   cursor_flags  bit 0 = cursor visible, bit 1 = pending wrap,
+ *                 bit 2 = the backend reports bit 1
  */
 struct tarpc_shell_screen_in {
     struct tarpc_in_arg common;
@@ -303,6 +305,41 @@ struct tarpc_shell_wait_out {
 };
 
 /*
+ * shell_feed(): feed raw bytes straight into the session's emulator, as
+ * if the program had written them; the pty is not involved.
+ */
+struct tarpc_shell_feed_in {
+    struct tarpc_in_arg common;
+
+    tarpc_int       handle;
+    uint8_t         data<>;
+};
+
+struct tarpc_shell_feed_out {
+    struct tarpc_out_arg common;
+
+    tarpc_int       retval;
+};
+
+/*
+ * shell_snapshot_restore(): encode the terminal to the backend's
+ * snapshot format, decode it and continue the session on the decoded
+ * terminal.
+ *   retval      0 ok, TE_EOPNOTSUPP when the backend has no snapshots
+ */
+struct tarpc_shell_snapshot_restore_in {
+    struct tarpc_in_arg common;
+
+    tarpc_int       handle;
+};
+
+struct tarpc_shell_snapshot_restore_out {
+    struct tarpc_out_arg common;
+
+    tarpc_int       retval;
+};
+
+/*
  * shell_close(): end the session - kill the child (SIGHUP, then SIGKILL),
  * close the fd, free the emulator and the handle.
  */
@@ -334,5 +371,7 @@ program shell
         RPC_DEF(shell_scrollback)
         RPC_DEF(shell_wait)
         RPC_DEF(shell_close)
+        RPC_DEF(shell_feed)
+        RPC_DEF(shell_snapshot_restore)
     } = 1;
 } = 44;

@@ -144,6 +144,23 @@ extern te_errno ta_shell_scrollback(int handle, int max_lines, te_string *text);
 extern te_errno ta_shell_wait(int handle, int timeout_ms, int *exited,
                               int *exit_code, int *exit_signal);
 
+/**
+ * Feed @p len bytes straight into the session's emulator, as if the
+ * program had written them. Nothing goes through the pty, so the bytes
+ * arrive exactly as given and at once - the way to drive the emulator
+ * itself as the device under test.
+ */
+extern te_errno ta_shell_feed(int handle, const void *data, size_t len);
+
+/**
+ * Take a snapshot of the session's terminal, decode it into a new
+ * terminal and continue the session on the decoded one.
+ *
+ * @return Status code; TE_EOPNOTSUPP when the backend has no snapshot
+ *         format, TE_EFAIL when the round trip failed.
+ */
+extern te_errno ta_shell_snapshot_restore(int handle);
+
 /** End the session: kill the child, close the fd, free everything. */
 extern te_errno ta_shell_close(int handle);
 

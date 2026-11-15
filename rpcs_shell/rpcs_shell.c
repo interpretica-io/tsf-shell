@@ -231,6 +231,31 @@ TARPC_FUNC_STATIC(shell_resize, {},
     MAKE_CALL(out->retval = func(in->handle, in->cols, in->rows));
 })
 
+/* ---- feed / snapshot ---------------------------------------------- */
+
+static te_errno
+shell_feed(int handle, const void *data, size_t len)
+{
+    return ta_shell_feed(handle, data, len);
+}
+
+TARPC_FUNC_STATIC(shell_feed, {},
+{
+    MAKE_CALL(out->retval = func(in->handle, in->data.data_val,
+                                 in->data.data_len));
+})
+
+static te_errno
+shell_snapshot_restore(int handle)
+{
+    return ta_shell_snapshot_restore(handle);
+}
+
+TARPC_FUNC_STATIC(shell_snapshot_restore, {},
+{
+    MAKE_CALL(out->retval = func(in->handle));
+})
+
 /* ---- scrollback --------------------------------------------------- */
 
 static te_errno

@@ -293,6 +293,46 @@ rpc_shell_resize(rcf_rpc_server *rpcs, int handle, int cols, int rows)
 
 /* See description in tapi_shell_rpc.h */
 te_errno
+rpc_shell_feed(rcf_rpc_server *rpcs, int handle, const void *data, size_t len)
+{
+    tarpc_shell_feed_in  in;
+    tarpc_shell_feed_out out;
+
+    memset(&in, 0, sizeof(in));
+    memset(&out, 0, sizeof(out));
+    in.handle = handle;
+    in.data.data_val = (uint8_t *)(uintptr_t)data;
+    in.data.data_len = (unsigned int)len;
+
+    rcf_rpc_call(rpcs, "shell_feed", &in, &out);
+    CHECK_RPC_ERRNO_UNCHANGED(shell_feed, out.retval);
+    TAPI_RPC_LOG(rpcs, shell_feed, "handle=%d len=%u", "%r", handle,
+                 (unsigned)len, out.retval);
+
+    RETVAL_TE_ERRNO(shell_feed, out.retval);
+}
+
+/* See description in tapi_shell_rpc.h */
+te_errno
+rpc_shell_snapshot_restore(rcf_rpc_server *rpcs, int handle)
+{
+    tarpc_shell_snapshot_restore_in  in;
+    tarpc_shell_snapshot_restore_out out;
+
+    memset(&in, 0, sizeof(in));
+    memset(&out, 0, sizeof(out));
+    in.handle = handle;
+
+    rcf_rpc_call(rpcs, "shell_snapshot_restore", &in, &out);
+    CHECK_RPC_ERRNO_UNCHANGED(shell_snapshot_restore, out.retval);
+    TAPI_RPC_LOG(rpcs, shell_snapshot_restore, "handle=%d", "%r", handle,
+                 out.retval);
+
+    RETVAL_TE_ERRNO(shell_snapshot_restore, out.retval);
+}
+
+/* See description in tapi_shell_rpc.h */
+te_errno
 rpc_shell_scrollback(rcf_rpc_server *rpcs, int handle, int max_lines,
                      te_string *text)
 {

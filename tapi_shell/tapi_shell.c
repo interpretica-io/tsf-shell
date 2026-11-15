@@ -302,6 +302,7 @@ tapi_shell_screen(tapi_shell_session *session, tapi_shell_screen_t *screen)
     if (rc == 0)
     {
         screen->cursor_visible = (cflags & 1) != 0;
+        screen->pending_wrap = (cflags & 4) == 0 ? -1 : (cflags & 2) != 0;
         screen->text = text.ptr != NULL ? TE_STRDUP(text.ptr) : TE_STRDUP("");
     }
     te_string_free(&text);
@@ -407,6 +408,27 @@ te_errno
 tapi_shell_resize(tapi_shell_session *session, int cols, int rows)
 {
     return rpc_shell_resize(session->rpcs, session->handle, cols, rows);
+}
+
+/* See description in tapi_shell.h */
+te_errno
+tapi_shell_feed(tapi_shell_session *session, const void *data, size_t len)
+{
+    return rpc_shell_feed(session->rpcs, session->handle, data, len);
+}
+
+/* See description in tapi_shell.h */
+te_errno
+tapi_shell_feed_str(tapi_shell_session *session, const char *str)
+{
+    return tapi_shell_feed(session, str, strlen(str));
+}
+
+/* See description in tapi_shell.h */
+te_errno
+tapi_shell_snapshot_restore(tapi_shell_session *session)
+{
+    return rpc_shell_snapshot_restore(session->rpcs, session->handle);
 }
 
 /* See description in tapi_shell.h */

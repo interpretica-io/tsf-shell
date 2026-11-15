@@ -660,7 +660,17 @@ ta_shell_screen(int handle, int *cols, int *rows, int *cursor_x, int *cursor_y,
     s->ops->cursor(s->term, &cx, &cy, &vis);
     if (cursor_x != NULL) *cursor_x = cx;
     if (cursor_y != NULL) *cursor_y = cy;
-    if (cursor_flags != NULL) *cursor_flags = vis ? 1u : 0u;
+    if (cursor_flags != NULL)
+    {
+        int pending = s->ops->pending_wrap != NULL ?
+                      s->ops->pending_wrap(s->term) : -1;
+
+        *cursor_flags = vis ? TA_SHELL_CURSOR_VISIBLE : 0u;
+        if (pending >= 0)
+            *cursor_flags |= TA_SHELL_CURSOR_WRAP_KNOWN;
+        if (pending > 0)
+            *cursor_flags |= TA_SHELL_CURSOR_PENDING_WRAP;
+    }
     if (text != NULL)
         s->ops->text(s->term, text);
 
@@ -745,6 +755,43 @@ ta_shell_resize(int handle, int cols, int rows)
         (void)ioctl(s->master_fd, TIOCSWINSZ, &ws);
     }
     s->ops->resize(s->term, cols, rows);
+
+    return 0;
+}
+
+/* ---- feed / snapshot ---------------------------------------------- */
+
+/* See description in ta_shell.h */
+te_errno
+ta_shell_feed(int handle, const void *data, size_t len)
+{
+    ta_shell_session *s = session_get(handle);
+
+    if (s == NULL)
+        return TE_RC(TE_TA_UNIX, TE_EINVAL);
+
+    /* Keep the order: what the program already wrote comes first. */
+    drain_once(s, 0);
+    if (len > 0)
+        s->ops->feed(s->term, data, len);
+
+    return 0;
+}
+
+/* See description in ta_shell.h */
+te_errno
+ta_shell_snapshot_restore(int handle)
+{
+    ta_shell_session *s = session_get(handle);
+
+    if (s == NULL)
+        return TE_RC(TE_TA_UNIX, TE_EINVAL);
+    if (s->ops->snapshot_restore == NULL)
+        return TE_RC(TE_TA_UNIX, TE_EOPNOTSUPP);
+
+    drain_once(s, 0);
+    if (s->ops->snapshot_restore(s->term) != 0)
+        return TE_RC(TE_TA_UNIX, TE_EFAIL);
 
     return 0;
 }

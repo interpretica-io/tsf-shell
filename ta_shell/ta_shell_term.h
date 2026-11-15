@@ -45,6 +45,13 @@ enum {
     TA_SHELL_ATTR_WIDE      = 64,
 };
 
+/** Cursor flag bits; must equal the shell_screen.out.cursor_flags wire values. */
+enum {
+    TA_SHELL_CURSOR_VISIBLE      = 1, /**< The cursor is shown. */
+    TA_SHELL_CURSOR_PENDING_WRAP = 2, /**< The next character wraps. */
+    TA_SHELL_CURSOR_WRAP_KNOWN   = 4, /**< The backend reports bit 2. */
+};
+
 /** One rendered cell, backend-neutral. */
 typedef struct ta_shell_cell_t {
     uint32_t     codepoint;   /**< Unicode code point, 0 for a blank cell. */
@@ -91,6 +98,24 @@ typedef struct ta_shell_term_ops {
     void (*scrollback)(ta_shell_term *t, int max_lines, te_string *out);
     /** Destroy the emulator state. */
     void (*destroy)(ta_shell_term *t);
+
+    /*
+     * Optional operations: a backend that cannot do one leaves it NULL.
+     */
+
+    /**
+     * Is the cursor in the "pending wrap" state (the last column was
+     * just filled and the next character goes to the next row)?
+     * @c 1 yes, @c 0 no, @c -1 when the backend cannot tell.
+     */
+    int  (*pending_wrap)(ta_shell_term *t);
+    /**
+     * Encode the terminal to the backend's snapshot format, decode that
+     * snapshot into a new terminal and continue the session on the
+     * decoded one. @c 0 ok; non-zero when the round trip failed, in
+     * which case the live terminal is kept.
+     */
+    int  (*snapshot_restore)(ta_shell_term *t);
 } ta_shell_term_ops;
 
 /*

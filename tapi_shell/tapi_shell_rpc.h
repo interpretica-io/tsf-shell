@@ -69,6 +69,13 @@ extern te_errno rpc_shell_row_attrs(rcf_rpc_server *rpcs, int handle, int y,
 extern te_errno rpc_shell_resize(rcf_rpc_server *rpcs, int handle, int cols,
                                  int rows);
 
+/** shell_feed(): feed raw bytes straight into the emulator. */
+extern te_errno rpc_shell_feed(rcf_rpc_server *rpcs, int handle,
+                               const void *data, size_t len);
+
+/** shell_snapshot_restore(): continue on the terminal's own snapshot. */
+extern te_errno rpc_shell_snapshot_restore(rcf_rpc_server *rpcs, int handle);
+
 /** shell_scrollback(): up to @p max_lines scrolled-off lines. */
 extern te_errno rpc_shell_scrollback(rcf_rpc_server *rpcs, int handle,
                                      int max_lines, te_string *text);

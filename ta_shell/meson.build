@@ -32,30 +32,25 @@ cc = meson.get_compiler('c')
 
 shell_defs = []
 
-# libghostty-vt: the zero-dependency terminal-state C library extracted
-# from Ghostty (preferred). It is normally vendored and statically linked
-# by the Builder (building it needs a Zig toolchain on the build host);
-# detect it here by pkg-config, then by a bare library probe. The exact
-# package/header name is confirmed at first build - see the binding
-# surface at the top of ta_shell_ghostty.c; pass -DTA_SHELL_GHOSTTY_HEADER
-# once <ghostty/vt.h> is on the include path.
-ghostty_dep = dependency('ghostty-vt', required: false)
+# libghostty-vt: the terminal-state C library of Ghostty (preferred).
+# It is built from the Ghostty sources with Zig ("zig build
+# -Demit-lib-vt") and installs a static library, <ghostty/vt.h> and two
+# pkg-config files. The static one is taken first: the library then
+# lives inside the agent and the agent host needs nothing installed.
+ghostty_dep = dependency('libghostty-vt-static', required: false)
 if not ghostty_dep.found()
     ghostty_dep = dependency('libghostty-vt', required: false)
 endif
-if not ghostty_dep.found()
-    ghostty_dep = cc.find_library('ghostty-vt', required: false)
-endif
-if not ghostty_dep.found()
-    ghostty_dep = cc.find_library('ghostty_vt', required: false)
+if ghostty_dep.found() and not cc.has_header('ghostty/vt.h',
+                                             dependencies: ghostty_dep)
+    warning('tsf-shell: libghostty-vt found but <ghostty/vt.h> is not; ' +
+            'the ghostty backend is left out.')
+    ghostty_dep = dependency('', required: false)
 endif
 if ghostty_dep.found()
     deps += [ ghostty_dep ]
     sources += files('ta_shell_ghostty.c')
     shell_defs += '-DTA_SHELL_HAVE_GHOSTTY'
-    if cc.has_header('ghostty/vt.h', dependencies: ghostty_dep)
-        shell_defs += '-DTA_SHELL_GHOSTTY_HEADER'
-    endif
 endif
 
 # libvterm: the emulator Neovim embeds (fallback). Ships vterm.pc on most
