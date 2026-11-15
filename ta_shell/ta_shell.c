@@ -672,7 +672,7 @@ ta_shell_cell(int handle, int x, int y, uint32_t *codepoint, int *fg, int *bg,
               int *fg_index, int *bg_index, unsigned int *flags)
 {
     ta_shell_session *s = session_get(handle);
-    ta_shell_cell     c;
+    ta_shell_cell_t     c;
 
     if (s == NULL)
         return TE_RC(TE_TA_UNIX, TE_EINVAL);
@@ -709,7 +709,7 @@ ta_shell_row_attrs(int handle, int y, te_string *cells)
 
     for (x = 0; x < cols; x++)
     {
-        ta_shell_cell c;
+        ta_shell_cell_t c;
 
         if (s->ops->cell(s->term, x, y, &c) != 0)
             continue;

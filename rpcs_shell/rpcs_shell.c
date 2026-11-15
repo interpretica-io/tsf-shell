@@ -127,7 +127,9 @@ shell_expect(int handle, const char *pattern, unsigned int flags,
 
 TARPC_FUNC_STATIC(shell_expect, {},
 {
-    int mx = -1, my = -1, offset = -1;
+    int mx = -1;
+    int my = -1;
+    int offset = -1;
 
     MAKE_CALL(out->retval = func(in->handle, in->pattern, in->flags,
                                  in->timeout_ms, &out->match, &mx, &my,
@@ -154,7 +156,10 @@ shell_screen(int handle, int *cols, int *rows, int *cursor_x, int *cursor_y,
 
 TARPC_FUNC_STATIC(shell_screen, {},
 {
-    int          cols = 0, rows = 0, cx = 0, cy = 0;
+    int          cols = 0;
+    int          rows = 0;
+    int          cx = 0;
+    int          cy = 0;
     unsigned int cf = 0;
 
     MAKE_CALL(out->retval = func(in->handle, &cols, &rows, &cx, &cy, &cf,
@@ -179,7 +184,10 @@ shell_cell(int handle, int x, int y, uint32_t *codepoint, int *fg, int *bg,
 TARPC_FUNC_STATIC(shell_cell, {},
 {
     uint32_t     codepoint = 0;
-    int          fg = -1, bg = -1, fg_index = -1, bg_index = -1;
+    int          fg = -1;
+    int          bg = -1;
+    int          fg_index = -1;
+    int          bg_index = -1;
     unsigned int flags = 0;
 
     MAKE_CALL(out->retval = func(in->handle, in->x, in->y, &codepoint, &fg,
@@ -252,7 +260,9 @@ shell_wait(int handle, int timeout_ms, int *exited, int *exit_code,
 
 TARPC_FUNC_STATIC(shell_wait, {},
 {
-    int exited = 0, exit_code = -1, exit_signal = 0;
+    int exited = 0;
+    int exit_code = -1;
+    int exit_signal = 0;
 
     MAKE_CALL(out->retval = func(in->handle, in->timeout_ms, &exited,
                                  &exit_code, &exit_signal));

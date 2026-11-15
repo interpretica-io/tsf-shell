@@ -141,7 +141,7 @@ g_get_size(ta_shell_term *t, int *cols, int *rows)
 }
 
 static int
-g_cell(ta_shell_term *t, int x, int y, ta_shell_cell *out)
+g_cell(ta_shell_term *t, int x, int y, ta_shell_cell_t *out)
 {
     ghostty_vt_cell_t c;
 

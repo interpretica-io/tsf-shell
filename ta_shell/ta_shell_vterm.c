@@ -243,7 +243,7 @@ vt_get_size(ta_shell_term *t, int *cols, int *rows)
 }
 
 static int
-vt_cell(ta_shell_term *t, int x, int y, ta_shell_cell *out)
+vt_cell(ta_shell_term *t, int x, int y, ta_shell_cell_t *out)
 {
     VTermPos        pos = { .row = y, .col = x };
     VTermScreenCell c;

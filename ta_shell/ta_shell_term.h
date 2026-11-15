@@ -46,14 +46,14 @@ enum {
 };
 
 /** One rendered cell, backend-neutral. */
-typedef struct ta_shell_cell {
+typedef struct ta_shell_cell_t {
     uint32_t     codepoint;   /**< Unicode code point, 0 for a blank cell. */
     int          fg;          /**< Foreground 0xRRGGBB, or -1 for default. */
     int          bg;          /**< Background 0xRRGGBB, or -1 for default. */
     int          fg_index;    /**< Palette index 0..255, or -1 if not indexed. */
     int          bg_index;    /**< Palette index 0..255, or -1 if not indexed. */
     unsigned int flags;       /**< TA_SHELL_ATTR_* bitmask. */
-} ta_shell_cell;
+} ta_shell_cell_t;
 
 /** Opaque per-session emulator state owned by a backend. */
 typedef struct ta_shell_term ta_shell_term;
@@ -78,7 +78,7 @@ typedef struct ta_shell_term_ops {
     /** Current screen size. */
     void (*get_size)(ta_shell_term *t, int *cols, int *rows);
     /** One cell; @c 0 ok, non-zero when (x,y) is out of range. */
-    int  (*cell)(ta_shell_term *t, int x, int y, ta_shell_cell *out);
+    int  (*cell)(ta_shell_term *t, int x, int y, ta_shell_cell_t *out);
     /** Cursor column, row and visibility (1/0). */
     void (*cursor)(ta_shell_term *t, int *x, int *y, int *visible);
     /** Whole screen as text: rows joined by '\n', right blanks trimmed. */
