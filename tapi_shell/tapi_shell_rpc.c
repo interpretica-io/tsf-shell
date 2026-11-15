@@ -62,7 +62,7 @@ rpc_shell_available(rcf_rpc_server *rpcs, unsigned int *features,
 
     if (out.retval == 0 && features != NULL)
         *features = out.features;
-    take_string(version, out.version);
+    take_string(version, out.versions);
 
     RETVAL_TE_ERRNO(shell_available, out.retval);
 }

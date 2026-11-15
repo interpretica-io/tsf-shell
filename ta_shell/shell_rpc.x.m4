@@ -67,7 +67,7 @@ struct tarpc_shell_available_out {
 
     tarpc_int       retval;
     tarpc_uint      features;
-    string          version<>;
+    string          versions<>;   /* "version" is a reserved RPC keyword */
 };
 
 /*

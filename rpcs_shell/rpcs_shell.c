@@ -52,7 +52,7 @@ TARPC_FUNC_STATIC(shell_available, {},
 {
     unsigned int features = 0;
 
-    MAKE_CALL(out->retval = func(&features, &out->version));
+    MAKE_CALL(out->retval = func(&features, &out->versions));
     out->features = features;
     out->common.errno_changed = false;
 })
