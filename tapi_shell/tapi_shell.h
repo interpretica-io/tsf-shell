@@ -142,11 +142,11 @@ typedef struct tapi_shell_session {
 /** Extra options for @ref tapi_shell_open_ex. Zeroed means defaults. */
 typedef struct tapi_shell_open_opts {
     const char         *term;    /**< TERM, or @c NULL for xterm-256color. */
-    const char *const  *env;     /**< NULL-terminated "KEY=VALUE", or @c NULL. */
+    const char *const  *env;     /**< NULL-terminated "KEY=VALUE" or @c NULL. */
     tapi_shell_backend  backend; /**< Force a backend, or 0 for preferred. */
 } tapi_shell_open_opts;
 
-/** Options for @ref tapi_shell_expect. Zeroed means a substring on the stream. */
+/** Options for @ref tapi_shell_expect; zeroed: a substring on the stream. */
 typedef struct tapi_shell_expect_opts {
     bool             regex;      /**< @p pattern is a POSIX extended regex. */
     tapi_shell_where where;      /**< Stream (default) or screen. */

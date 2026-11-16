@@ -1,0 +1,76 @@
+name: ci
+
+# Two checks on every push and pull request.
+#
+# lint: the static checks of ci/lint.sh - layout, licence headers,
+# cppcheck, shellcheck, actionlint. Run it locally the same way.
+#
+# backends: the two terminal-emulator backends built against the real
+# libraries (libvterm from Ubuntu, libghostty-vt built from the pinned
+# Ghostty commit in ci/ghostty.env) and driven through the backend seam
+# by ci/backend_test.c under AddressSanitizer and UBSan. The rest of the
+# module (the PTY sessions, the RPCs, the engine TAPI) needs a Test
+# Environment build and is exercised end to end by tsf-shell-ts.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ACTIONLINT_VERSION: 1.7.12
+  ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install the linters
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends cppcheck shellcheck
+          tarball="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl -fsSL -o "/tmp/${tarball}" \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${tarball}"
+          echo "${ACTIONLINT_SHA256}  /tmp/${tarball}" | sha256sum -c -
+          sudo tar -xzf "/tmp/${tarball}" -C /usr/local/bin actionlint
+
+      - name: Lint
+        run: ci/lint.sh
+
+  backends:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install libvterm and the compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential pkg-config libvterm-dev
+
+      - name: Restore libghostty-vt
+        id: ghostty
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/ghostty-vt
+          key: ghostty-vt-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('ci/ghostty.env', 'ci/build-ghostty.sh') }}
+
+      - name: Build libghostty-vt
+        if: steps.ghostty.outputs.cache-hit != 'true'
+        run: ci/build-ghostty.sh "$HOME/ghostty-vt" "$RUNNER_TEMP/ghostty-build"
+
+      - name: Backend contract tests (ASan + UBSan)
+        run: ci/backend-test.sh "$HOME/ghostty-vt"

@@ -45,7 +45,7 @@ enum {
     TA_SHELL_ATTR_WIDE      = 64,
 };
 
-/** Cursor flag bits; must equal the shell_screen.out.cursor_flags wire values. */
+/** Cursor flag bits; equal to the shell_screen.out.cursor_flags wire values. */
 enum {
     TA_SHELL_CURSOR_VISIBLE      = 1, /**< The cursor is shown. */
     TA_SHELL_CURSOR_PENDING_WRAP = 2, /**< The next character wraps. */
@@ -57,8 +57,8 @@ typedef struct ta_shell_cell_t {
     uint32_t     codepoint;   /**< Unicode code point, 0 for a blank cell. */
     int          fg;          /**< Foreground 0xRRGGBB, or -1 for default. */
     int          bg;          /**< Background 0xRRGGBB, or -1 for default. */
-    int          fg_index;    /**< Palette index 0..255, or -1 if not indexed. */
-    int          bg_index;    /**< Palette index 0..255, or -1 if not indexed. */
+    int          fg_index;    /**< Palette index 0..255, -1 if not indexed. */
+    int          bg_index;    /**< Palette index 0..255, -1 if not indexed. */
     unsigned int flags;       /**< TA_SHELL_ATTR_* bitmask. */
 } ta_shell_cell_t;
 

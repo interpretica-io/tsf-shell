@@ -49,7 +49,7 @@ enum {
 /** ta_shell_expect() flags. Wire values. */
 enum {
     TA_SHELL_EXPECT_REGEX  = 1, /**< pattern is a POSIX extended regex. */
-    TA_SHELL_EXPECT_SCREEN = 2, /**< match the rendered screen, not the stream. */
+    TA_SHELL_EXPECT_SCREEN = 2, /**< match the rendered screen, not stream. */
 };
 
 /**
@@ -110,7 +110,8 @@ extern te_errno ta_shell_send(int handle, const void *data, size_t len,
  */
 extern te_errno ta_shell_expect(int handle, const char *pattern,
                                 unsigned int flags, int timeout_ms,
-                                te_string *match, int *mx, int *my, int *offset);
+                                te_string *match, int *mx, int *my,
+                                int *offset);
 
 /** A screen snapshot: size, cursor and the visible text. */
 extern te_errno ta_shell_screen(int handle, int *cols, int *rows, int *cursor_x,
