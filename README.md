@@ -243,7 +243,7 @@ show up as an unexpected pass once the emulator is fixed.
 | Emulator | Defect |
 |---|---|
 | libghostty-vt | Cursor backward tab (CBT, `CSI Z`) from the last column moves the cursor but keeps the pending wrap, so the next character lands one row below the cursor; CUB, CR, CHA and BS clear it. A snapshot drops the flag (it is valid only at the last column), so a restored terminal renders that character in a different place. |
-| libvterm 0.1.x | A UTF-8 character cut between two writes after other text decodes as U+FFFD; the same bytes one at a time decode correctly. |
+| libvterm (0.1.4, 0.3.3) | A UTF-8 character cut between two writes after other text decodes as U+FFFD; the same bytes one at a time decode correctly. |
 
 ## Scope
 

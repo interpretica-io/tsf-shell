@@ -432,7 +432,7 @@ test_chunking(void)
     chunk_case("cut escape sequence", "ab\033[1;3HX", 4, NULL);
     chunk_case("cut UTF-8", "ab\xe4\xb8\xad" "c", 4,
                ops->backend_bit == TA_SHELL_BACKEND_VTERM ?
-               "libvterm 0.1.x: UTF-8 cut between writes becomes U+FFFD" :
+               "libvterm: UTF-8 cut between writes becomes U+FFFD" :
                NULL);
 }
 
